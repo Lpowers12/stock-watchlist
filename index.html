@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>購入候補銘柄リスト</title>
+<style>
+  :root {
+    --bg: #f8f9fc;
+    --white: #ffffff;
+    --primary: #1a3a5c;
+    --accent: #2a7dd4;
+    --accent-light: #e8f2fc;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --red: #dc2626;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --border: #dce3ed;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--gray-900);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: var(--primary);
+    color: white;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-title { font-size: 17px; font-weight: 700; letter-spacing: 0.02em; }
+  .header-sub { font-size: 11px; opacity: 0.7; margin-top: 3px; }
+
+  /* Summary bar */
+  .summary {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+  }
+  .summary-item { text-align: center; min-width: 80px; flex-shrink: 0; }
+  .summary-num { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .summary-label { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+
+  /* Main */
+  .main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+
+  /* Table card */
+  .table-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .table-toolbar {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .toolbar-title { font-size: 14px; font-weight: 700; color: var(--gray-700); }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #1a6bb8; }
+  .btn-danger { background: #fee2e2; color: var(--red); }
+  .btn-danger:hover { background: #fecaca; }
+  .btn-gray { background: var(--gray-100); color: var(--gray-700); }
+  .btn-gray:hover { background: var(--gray-200); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-green { background: var(--green-light); color: var(--green); }
+  .btn-green:hover { background: #bbf7d0; }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 700px;
+  }
+  thead tr { background: var(--primary); }
+  thead th {
+    padding: 11px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+  }
+  thead th.right { text-align: right; }
+  thead th.center { text-align: center; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: var(--accent-light); }
+  tbody td { padding: 11px 12px; vertical-align: middle; }
+  tbody td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody td.center { text-align: center; }
+
+  .code-badge {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .company-name { font-weight: 600; color: var(--gray-900); }
+  .yield-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .yield-high { background: var(--green-light); color: var(--green); }
+  .yield-mid { background: #fef9c3; color: #854d0e; }
+  .yield-low { background: var(--gray-100); color: var(--gray-500); }
+
+  .price-ok { color: var(--green); font-weight: 700; }
+  .price-over { color: var(--red); font-weight: 600; }
+
+  .memo-text { font-size: 12px; color: var(--gray-500); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Empty */
+  .empty {
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--gray-400);
+  }
+  .empty-icon { font-size: 44px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; margin-bottom: 16px; }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .overlay.hidden { display: none; }
+  .modal {
+    background: white;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    margin-top: 40px;
+  }
+  .modal-head {
+    padding: 18px 22px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-head h2 { font-size: 16px; font-weight: 700; }
+  .modal-close { background: none; border: none; color: white; font-size: 20px; cursor: pointer; opacity: 0.8; }
+  .modal-close:hover { opacity: 1; }
+  .modal-body { padding: 22px; }
+  .modal-foot {
+    padding: 14px 22px;
+    background: var(--gray-100);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 11px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42,125,212,0.1); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+
+  @media (max-width: 600px) {
+    .main { padding: 12px 16px; }
+    .summary { padding: 10px 16px; gap: 16px; }
+    .header { padding: 14px 16px; }
+    .field-row { grid-template-columns: 1fr; }
+    .overlay { padding: 0; align-items: flex-end; }
+    .modal { border-radius: 14px 14px 0 0; margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">📈 購入候補銘柄リスト</div>
+    <div class="header-sub">気になる銘柄を管理して、買い時を逃さない</div>
+  </div>
+  <button class="btn btn-primary" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4)" onclick="openAdd()">＋ 銘柄を追加</button>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<div class="main">
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="toolbar-title" id="tableTitle">銘柄一覧</div>
+      <div style="display:flex;gap:8px">
+        <select id="sortSelect" onchange="renderTable()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+          <option value="default">登録順</option>
+          <option value="yield_desc">配当利回り 高い順</option>
+          <option value="yield_asc">配当利回り 低い順</option>
+          <option value="price_asc">購入希望価格 低い順</option>
+          <option value="price_desc">購入希望価格 高い順</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>証券コード</th>
+            <th>会社名</th>
+            <th class="right">配当金額（円）</th>
+            <th class="right">配当利回り</th>
+            <th class="right">現在価格（円）</th>
+            <th class="right">購入希望価格（円）</th>
+            <th>判定</th>
+            <th>メモ</th>
+            <th class="center">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty hidden">
+      <div class="empty-icon">📋</div>
+      <p>まだ銘柄が登録されていません</p>
+      <button class="btn btn-primary" onclick="openAdd()">＋ 最初の銘柄を追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay hidden" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">銘柄を追加</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field">
+          <label>証券コード *</label>
+          <input id="f_code" type="text" placeholder="例：8035" maxlength="6">
+        </div>
+        <div class="field">
+          <label>会社名 *</label>
+          <input id="f_name" type="text" placeholder="例：東京エレクトロン">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>配当金額（円）</label>
+          <input id="f_dividend" type="number" placeholder="例：618" min="0">
+          <div class="hint">1株あたりの年間配当金</div>
+        </div>
+        <div class="field">
+          <label>配当利回り（%）</label>
+          <input id="f_yield" type="number" placeholder="例：1.6" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>現在価格（円）</label>
+          <input id="f_current" type="number" placeholder="例：38500" min="0">
+        </div>
+        <div class="field">
+          <label>購入希望価格（円）</label>
+          <input id="f_target" type="number" placeholder="例：32000" min="0">
+          <div class="hint">この価格以下なら買い時</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>メモ</label>
+        <input id="f_memo" type="text" placeholder="例：AI需要で成長期待、半導体製造装置トップ">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveStock()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let editId = null;
+
+function load() {
+  try { return JSON.parse(localStorage.getItem('stockWatchlist') || '[]'); } catch(e) { return []; }
+}
+function save(data) { localStorage.setItem('stockWatchlist', JSON.stringify(data)); }
+
+function fmt(n) {
+  if (!n && n !== 0) return '—';
+  return Number(n).toLocaleString('ja-JP');
+}
+
+function yieldBadge(y) {
+  if (!y) return '<span style="color:var(--gray-400)">—</span>';
+  const cls = y >= 3 ? 'yield-high' : y >= 2 ? 'yield-mid' : 'yield-low';
+  return `<span class="yield-badge ${cls}">${Number(y).toFixed(2)}%</span>`;
+}
+
+function judgment(current, target) {
+  if (!current || !target) return '<span style="color:var(--gray-400);font-size:12px">—</span>';
+  if (Number(current) <= Number(target)) {
+    return '<span style="color:var(--green);font-weight:700;font-size:13px">✅ 買い時</span>';
+  } else {
+    const diff = Math.round(((Number(current) - Number(target)) / Number(target)) * 100);
+    return `<span style="color:var(--red);font-size:12px">▲ ${diff}% 高い</span>`;
+  }
+}
+
+function renderSummary() {
+  const data = load();
+  const avgYield = data.filter(s=>s.yield).reduce((sum,s,_,arr)=>sum+Number(s.yield)/arr.filter(x=>x.yield).length,0);
+  const buyable = data.filter(s=>s.current && s.target && Number(s.current) <= Number(s.target)).length;
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-item"><div class="summary-num">${data.length}</div><div class="summary-label">登録銘柄数</div></div>
+    <div class="summary-item"><div class="summary-num" style="color:var(--green)">${buyable}</div><div class="summary-label">買い時銘柄</div></div>
+    <div class="summary-item"><div class="summary-num" style="font-size:17px">${data.filter(s=>s.yield).length>0?avgYield.toFixed(2)+'%':'—'}</div><div class="summary-label">平均配当利回り</div></div>
+  `;
+}
+
+function getSorted() {
+  let data = load();
+  const sort = document.getElementById('sortSelect')?.value || 'default';
+  if (sort === 'yield_desc') data.sort((a,b)=>(Number(b.yield)||0)-(Number(a.yield)||0));
+  else if (sort === 'yield_asc') data.sort((a,b)=>(Number(a.yield)||0)-(Number(b.yield)||0));
+  else if (sort === 'price_asc') data.sort((a,b)=>(Number(a.target)||0)-(Number(b.target)||0));
+  else if (sort === 'price_desc') data.sort((a,b)=>(Number(b.target)||0)-(Number(a.target)||0));
+  return data;
+}
+
+function renderTable() {
+  const data = getSorted();
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('tableTitle').textContent = `銘柄一覧（${data.length}件）`;
+
+  if (!data.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = data.map(s => `
+    <tr>
+      <td><span class="code-badge">${s.code}</span></td>
+      <td><div class="company-name">${s.name}</div></td>
+      <td class="right">${s.dividend ? fmt(s.dividend)+'円' : '—'}</td>
+      <td class="right">${yieldBadge(s.yield)}</td>
+      <td class="right">${s.current ? fmt(s.current)+'円' : '—'}</td>
+      <td class="right">${s.target ? fmt(s.target)+'円' : '—'}</td>
+      <td>${judgment(s.current, s.target)}</td>
+      <td><div class="memo-text" title="${s.memo||''}">${s.memo||'—'}</div></td>
+      <td class="center" style="white-space:nowrap">
+        <button class="btn btn-gray btn-sm" onclick="openEdit('${s.id}')" style="margin-right:4px">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteStock('${s.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAdd() {
+  editId = null;
+  document.getElementById('modalTitle').textContent = '銘柄を追加';
+  ['code','name','dividend','yield','current','target','memo'].forEach(k => {
+    document.getElementById('f_'+k).value = '';
+  });
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function openEdit(id) {
+  const s = load().find(x=>x.id===id);
+  if (!s) return;
+  editId = id;
+  document.getElementById('modalTitle').textContent = '銘柄を編集';
+  document.getElementById('f_code').value = s.code || '';
+  document.getElementById('f_name').value = s.name || '';
+  document.getElementById('f_dividend').value = s.dividend || '';
+  document.getElementById('f_yield').value = s.yield || '';
+  document.getElementById('f_current').value = s.current || '';
+  document.getElementById('f_target').value = s.target || '';
+  document.getElementById('f_memo').value = s.memo || '';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function saveStock() {
+  const code = document.getElementById('f_code').value.trim();
+  const name = document.getElementById('f_name').value.trim();
+  if (!code || !name) { alert('証券コードと会社名は必須です'); return; }
+
+  const stock = {
+    id: editId || Date.now().toString(),
+    code, name,
+    dividend: document.getElementById('f_dividend').value,
+    yield: document.getElementById('f_yield').value,
+    current: document.getElementById('f_current').value,
+    target: document.getElementById('f_target').value,
+    memo: document.getElementById('f_memo').value,
+  };
+
+  const data = load();
+  if (editId) {
+    const idx = data.findIndex(x=>x.id===editId);
+    if (idx >= 0) data[idx] = stock;
+  } else {
+    data.push(stock);
+  }
+  save(data);
+  closeModal();
+  renderSummary();
+  renderTable();
+}
+
+function deleteStock(id) {
+  if (!confirm('この銘柄を削除しますか？')) return;
+  save(load().filter(x=>x.id!==id));
+  renderSummary();
+  renderTable();
+}
+
+function closeModal() { document.getElementById('overlay').classList.add('hidden'); }
+function closeOverlay(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+// 初期データ（半導体銘柄サンプル）
+if (!load().length) {
+  const sample = [
+    { id:'1', code:'8035', name:'東京エレクトロン', dividend:'618', yield:'1.6', current:'38500', target:'32000', memo:'半導体製造装置トップ、AI需要で成長' },
+    { id:'2', code:'6857', name:'アドバンテスト', dividend:'', yield:'0.2', current:'29885', target:'22000', memo:'半導体テスタ世界シェアNo.1' },
+    { id:'3', code:'4063', name:'信越化学工業', dividend:'106', yield:'1.7', current:'6200', target:'5500', memo:'20年で配当26倍の増配優良株' },
+    { id:'4', code:'6963', name:'ローム', dividend:'', yield:'3.5', current:'2800', target:'2500', memo:'パワー半導体・GaN。直近純損失注意' },
+  ];
+  save(sample);
+}
+
+renderSummary();
+renderTable();
+</script>
+</body>
+</html>
