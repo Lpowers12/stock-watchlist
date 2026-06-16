@@ -256,6 +256,7 @@
           <option value="yield_asc">配当利回り 低い順</option>
           <option value="price_asc">購入希望価格 低い順</option>
           <option value="price_desc">購入希望価格 高い順</option>
+          <option value="near_target">希望額に近い順</option>
         </select>
       </div>
     </div>
@@ -264,7 +265,7 @@
         <thead>
           <tr>
             <th>証券コード</th>
-            <th>会社名</th>
+            <th>会社名・差額進捗</th>
             <th class="right">配当金額（円）</th>
             <th class="right">配当利回り</th>
             <th class="right">現在価格（円）</th>
@@ -356,6 +357,28 @@ function yieldBadge(y) {
   return `<span class="yield-badge ${cls}">${Number(y).toFixed(2)}%</span>`;
 }
 
+function diffBar(current, target) {
+  if (!current || !target) return '';
+  const cur = Number(current);
+  const tgt = Number(target);
+  const diff = cur - tgt;
+  if (diff <= 0) {
+    return '<div style="font-size:11px;color:var(--green);font-weight:700;margin-top:3px">✅ 希望額達成！ ' + Math.abs(diff).toLocaleString('ja-JP') + '円 下回り中</div>';
+  }
+  const pct = Math.min(Math.round((tgt / cur) * 100), 100);
+  return \`
+    <div style="margin-top:5px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--red);margin-bottom:3px">
+        <span>あと <b>${diff.toLocaleString('ja-JP')}円</b> で希望額</span>
+        <span>${pct}%</span>
+      </div>
+      <div style="background:var(--gray-200);border-radius:100px;height:5px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#2a7dd4,#16a34a);border-radius:100px;transition:width 0.4s"></div>
+      </div>
+    </div>
+  \`;
+}
+
 function judgment(current, target) {
   if (!current || !target) return '<span style="color:var(--gray-400);font-size:12px">—</span>';
   if (Number(current) <= Number(target)) {
@@ -384,6 +407,13 @@ function getSorted() {
   else if (sort === 'yield_asc') data.sort((a,b)=>(Number(a.yield)||0)-(Number(b.yield)||0));
   else if (sort === 'price_asc') data.sort((a,b)=>(Number(a.target)||0)-(Number(b.target)||0));
   else if (sort === 'price_desc') data.sort((a,b)=>(Number(b.target)||0)-(Number(a.target)||0));
+  else if (sort === 'near_target') {
+    data.sort((a,b) => {
+      const diffA = (a.current && a.target) ? (Number(a.current) - Number(a.target)) / Number(a.target) * 100 : 9999;
+      const diffB = (b.current && b.target) ? (Number(b.current) - Number(b.target)) / Number(b.target) * 100 : 9999;
+      return diffA - diffB;
+    });
+  }
   return data;
 }
 
@@ -403,7 +433,10 @@ function renderTable() {
   tbody.innerHTML = data.map(s => `
     <tr>
       <td><span class="code-badge">${s.code}</span></td>
-      <td><div class="company-name">${s.name}</div></td>
+      <td>
+        <div class="company-name">${s.name}</div>
+        ${diffBar(s.current, s.target)}
+      </td>
       <td class="right">${s.dividend ? fmt(s.dividend)+'円' : '—'}</td>
       <td class="right">${yieldBadge(s.yield)}</td>
       <td class="right">${s.current ? fmt(s.current)+'円' : '—'}</td>
